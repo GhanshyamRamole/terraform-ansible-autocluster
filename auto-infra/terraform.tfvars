@@ -5,7 +5,7 @@
 region = "us-east-1"
 
 # Amazon Linux 2 AMI (example – change if needed)
-ami = "ami-0c02fb55956c7d316"
+ami = "ami-068c0051b15cdb816"
 
 instance_type = "t2.micro"
 
@@ -27,12 +27,12 @@ worker_count = 2
 ##################################
 
 # Existing VPC ID
-vpc_id = "vpc-0abc1234def567890"
+vpc_id = "vpc-091692abf2042ee22"
 
 # Public subnets (at least 2 for ALB)
 subnets = [
-  "subnet-0123456789abcdef0",
-  "subnet-0fedcba9876543210"
+  "subnet-0732b4b4a7a13aa73",
+  "subnet-094abdd789c6585d8"
 ]
 
 ##################################
