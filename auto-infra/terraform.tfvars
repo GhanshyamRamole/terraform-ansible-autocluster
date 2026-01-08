@@ -5,6 +5,7 @@ public_key_path = "~/.ssh/id_rsa.pub"               # Update to point to your ac
 
 # Your existing VPC ID
 vpc_id = "vpc-091692abf2042ee22" 
+worker_count="3"
 
 # Your existing Public Subnets
 subnets = [
