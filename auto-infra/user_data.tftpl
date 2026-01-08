@@ -11,9 +11,9 @@ yum update -y
 yum install  ansible*  -y
 
 mkdir  /home/itsadmin/default
-echo [web] >> /home/itsdmin/default/inventory
-echo worker-1 >> /home/itsdmin/default/inventory
-echo worker-2 >> /home/itsdmin/default/inventory
+echo [web] >> /home/itsadmin/default/inventory
+echo worker-1 >> /home/itsadmin/default/inventory
+echo worker-2 >> /home/itsadmin/default/inventory
 echo worker-3 >> /home/itsadmin/default/inventory
 echo [web:vars] >> /home/itsadmin/default/inventory
 echo ansible_port=22 >> /home/itsadmin/default/inventory
