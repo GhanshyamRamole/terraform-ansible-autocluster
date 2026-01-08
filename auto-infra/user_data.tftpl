@@ -1,0 +1,41 @@
+#!/bin/bash
+hostnamectl  set-hostname acn
+useradd itsadmin
+echo 111 | passwd --stdin itsadmin
+echo 111 | passwd --stdin root
+echo "itsadmin  ALL=(ALL)   NOPASSWD: ALL" >> /etc/sudoers
+sed 's/PasswordAuthentication no/PasswordAuthentication yes/' -i /etc/ssh/sshd_config
+echo PermitRootLogin yes >> /etc/ssh/sshd_config
+systemctl restart sshd
+yum update -y
+yum install  ansible*  -y
+
+mkdir  /home/itsadmin/default
+echo [web] >> /home/itsdmin/default/inventory
+echo worker-1 >> /home/itsdmin/default/inventory
+echo worker-2 >> /home/itsdmin/default/inventory
+echo worker-3 >> /home/itsadmin/default/inventory
+echo [web:vars] >> /home/itsadmin/default/inventory
+echo ansible_port=22 >> /home/itsadmin/default/inventory
+echo ansible_user=itsadmin >> /home/itsadmin/default/inventory
+echo ansible_password=111 >> /home/itsadmin/default/inventory
+
+echo [defaults]  >> /home/itsadmin/default/ansible.cfg
+echo inventory=/home/itsadmin/default/inventory  >> /home/itsadmin/default/ansible.cfg
+echo remote_user=itsadmin  >> /home/itsadmin/default/ansible.cfg
+echo host_key_checking=false  >> /home/itsadmin/default/ansible.cfg
+echo interpreter_python=auto_silent   >> /home/itsadmin/default/ansible.cfg
+echo [privilege_escalation]  >> /home/itsadmin/default/ansible.cfg
+echo become=yes  >> /home/itsadmin/default/ansible.cfg
+echo become_user=root  >> /home/itsadmin/default/ansible.cfg
+echo become_method=sudo  >> /home/itsadmin/default/ansible.cfg
+echo become_ask_pass=false  >> /home/itsadmin/default/ansible.cfg
+
+chown -R  itsadmin:itsadmin  /home/itsadmin/default
+
+%{ for index, ip in worker_ips ~}
+echo "${ip} worker-${index + 1}" >> /etc/hosts
+%{ endfor ~}
+cd /home/itsadmin/default; ansible worker-1 -a "hostnamectl set-hostname worker-1.example.com"
+cd /home/itsadmin/default; ansible worker-2 -a "hostnamectl set-hostname worker-2.example.com"
+cd /home/itsadmin/default; ansible worker-3 -a "hostnamectl set-hostname worker-3.example.com"
