@@ -9,4 +9,3 @@ output "master_ip" {
 output "worker_ips" {
   value = aws_instance.workers[*].public_ip
 }
-
