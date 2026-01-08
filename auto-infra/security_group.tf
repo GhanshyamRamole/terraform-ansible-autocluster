@@ -1,5 +1,7 @@
 resource "aws_security_group" "common" {
-  name = "common-sg"
+  name        = "common-sg"
+  description = "Allow SSH and HTTP"
+  vpc_id      = var.vpc_id  # <--- FIXED: Must specify your custom VPC ID
 
   ingress {
     from_port   = 22
@@ -21,5 +23,6 @@ resource "aws_security_group" "common" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
+  tags = var.tags
+}
