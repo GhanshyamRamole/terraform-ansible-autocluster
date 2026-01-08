@@ -5,4 +5,3 @@ ${master_ip}
 %{ for ip in worker_ips ~}
 ${ip}
 %{ endfor ~}
-
