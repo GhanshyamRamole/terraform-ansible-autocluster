@@ -11,6 +11,6 @@
 
 - name: Custom index page
   copy:
-    content: "<h1>NGINX from {{ inventory_hostname }}</h1>"
+    content: "<h1>Hosting NGINX Web from {{ inventory_hostname }} node Sucessfully </h1>"
     dest: /usr/share/nginx/html/index.html
 
