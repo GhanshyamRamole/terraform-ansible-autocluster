@@ -44,7 +44,38 @@ resource "aws_instance" "master" {
   user_data = templatefile("${path.module}/user_data.tftpl", {
     worker_ips = aws_instance.workers[*].private_ip
   })
- 
+
+
+  #  Define how Terraform connects to the instance
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"        # Default user for Amazon Linux 2
+    private_key = file("~/.ssh/id_rsa") # Path to your PRIVATE key
+    host        = self.public_ip
+  }
+  
+  # Upload the ansible folder
+  provisioner "file" {
+    source      = "${path.module}/../ansible" # Local path to your ansible folder
+    destination = "/home/ec2-user/ansible"    # Remote destination path
+  }
+
+  # Move folder to itsadmin user (after user_data creates the user)
+
+  provisioner "remote-exec" {
+    inline = [
+      # Wait for the directory to be created (this waits for yum update to finish)
+      "while ! sudo test -d /home/itsadmin/default; do echo 'Waiting for directory creation...'; sleep 10; done",
+
+      # Safety buffer to ensure permissions are applied
+      "sleep 10",
+
+      # Now move the files and change ownership
+      "sudo mv /home/ec2-user/ansible/* /home/itsadmin/default/",
+      "sudo chown -R itsadmin:itsadmin /home/itsadmin/default/"
+    ]
+  }
+
   tags = merge(var.tags, { Name = "ansible-master" })
 }
 
