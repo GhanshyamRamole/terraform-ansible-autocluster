@@ -1,5 +1,7 @@
-- hosts: workers
+---
+- name: Hosting application using nginx to view lbs working  http://<YOUR-ALB-DNS-NAME> 
+  hosts: all
   become: yes
-  roles:
-    - nginx
-
+  tasks:
+    - name: Configure Nginx
+      import_tasks: nginx.yml
