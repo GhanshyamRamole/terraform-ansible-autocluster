@@ -2,6 +2,10 @@
 
 An automated infrastructure deployment solution that provisions an Ansible cluster on AWS using Terraform, complete with load balancing and NGINX deployment.
 
+## 🏗️ Architecture
+
+![Architecture Diagram](./architecture-diagram.png)
+
 ## Architecture Overview
 
 This project creates:
@@ -92,7 +96,10 @@ terraform-ansible-autocluster/
 │   └── output.tf              # Output values
 └── ansible/                   # Ansible configuration
     ├── playbook.yml           # Main playbook
-    └── nginx.yml              # NGINX installation tasks
+    └── roles/webserver        # webserver role
+         ├── tasks/main.yml     
+         ├── handles/main.yml
+         └── templates/index.yml        
 ```
 
 ## Configuration Details
@@ -237,5 +244,3 @@ For issues and questions:
 - Open an issue in the repository
 
 ---
-
-**Note**: This project is designed for development and testing. For production use, implement additional security measures and monitoring.
