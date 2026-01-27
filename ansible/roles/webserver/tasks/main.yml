@@ -1,0 +1,23 @@
+---
+# tasks file for roles/webserver
+
+
+- name: Install Nginx
+  yum:
+    name: nginx
+    state: present
+
+- name: Start and Enable Nginx Service
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Deploy Dynamic Index Page
+  template:
+    src: index.j2
+    dest: /usr/share/nginx/html/index.html
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Nginx

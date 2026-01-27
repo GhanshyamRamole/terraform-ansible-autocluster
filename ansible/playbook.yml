@@ -1,7 +1,8 @@
 ---
-- name: Hosting application using nginx to view lbs working  http://<YOUR-ALB-DNS-NAME> 
+- name: Configure Webservers using Roles
   hosts: all
   become: yes
-  tasks:
-    - name: Configure Nginx
-      import_tasks: nginx.yml
+  gather_facts: yes  # Necessary for IP variables
+  
+  roles:
+    - webserver
