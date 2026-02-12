@@ -1,81 +1,99 @@
-
-	###########################################################
-	# Provisioning of Ansible cluster Master and Worker nodes #
-	###########################################################
-
-resource "aws_key_pair" "key" {
-  key_name   = "terraform-key-new"        # Changed name to avoid conflicts if recreating
-  public_key = file(var.public_key_path)
+# --- VPC & Networking ---
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  tags                 = { Name = "dev-vpc" }
 }
 
-resource "aws_instance" "workers" {
-  count         = var.worker_count
-  ami           = var.ami
-  instance_type = var.instance_type
-  key_name      = aws_key_pair.key.key_name
-
-  subnet_id              = element(var.subnets, count.index)
-  vpc_security_group_ids = [aws_security_group.common.id]
-
-  user_data = <<-EOF
-  #!/bin/bash
-  useradd itsadmin
-  echo 111 | passwd --stdin itsadmin
-  echo 111 | passwd --stdin root
-  echo "itsadmin  ALL=(ALL)   NOPASSWD: ALL" >> /etc/sudoers
-  sed 's/PasswordAuthentication no/PasswordAuthentication yes/' -i /etc/ssh/sshd_config
-  echo PermitRootLogin yes >> /etc/ssh/sshd_config
-  systemctl restart sshd
-  EOF
-
-  tags = merge(var.tags, { Name = "worker-${count.index + 1}" })
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = var.az
+  tags                    = { Name = "dev-public-subnet" }
 }
-   
 
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "dev-igw" }
+}
 
-resource "aws_instance" "master" {
-  ami           = var.ami
-  instance_type = var.instance_type
-  key_name      = aws_key_pair.key.key_name
-  
-  subnet_id              = var.subnets[0]
-  vpc_security_group_ids = [aws_security_group.common.id]
-  
-  user_data = templatefile("${path.module}/user_data.tftpl", {
-    worker_ips = aws_instance.workers[*].private_ip
-  })
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+  tags = { Name = "dev-public-rt" }
+}
 
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public_rt.id
+}
 
-  #  Define how Terraform connects to the instance
+# --- Security Group (Using dynamic blocks for cleaner code) ---
+resource "aws_security_group" "web_sg" {
+  name   = "allow-web-traffic"
+  vpc_id = aws_vpc.main.id
+
+  dynamic "ingress" {
+    for_each = [22, 80, 81, 443]
+    content {
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"] 
+    }
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# --- Node Servers (Using Count for scalability) ---
+resource "aws_instance" "nodes" {
+  count                  = 3
+  ami                    = var.AWS_AMI
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+  subnet_id              = aws_subnet.public.id
+  key_name               = var.key
+  user_data              = file("${path.module}/nodes.sh")
+
+  tags = {
+    Name = "node${count.index + 1}"
+  }
+}
+
+# --- Ansible Control Plane ---
+resource "aws_instance" "ansible" {
+  ami                    = var.AWS_AMI
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+  subnet_id              = aws_subnet.public.id
+  key_name               = var.key
+  user_data              = file("${path.module}/ansible.sh")
+
   connection {
     type        = "ssh"
-    user        = "ec2-user"        # Default user for Amazon Linux 2
-    private_key = file("~/.ssh/id_rsa") # Path to your PRIVATE key
+    user        = "root" 
+    password      = var.passwd
     host        = self.public_ip
+    timeout     = "2m"
   }
-  
-  # Upload the ansible folder
-  provisioner "file" {
-    source      = "${path.module}/../ansible" # Local path to your ansible folder
-    destination = "/home/ec2-user/ansible"    # Remote destination path
-  }
-
-  # Move folder to itsadmin user (after user_data creates the user)
 
   provisioner "remote-exec" {
     inline = [
-      # Wait for the directory to be created (this waits for yum update to finish)
-      "while ! sudo test -d /home/itsadmin/default; do echo 'Waiting for directory creation...'; sleep 10; done",
-
-      # Safety buffer to ensure permissions are applied
-      "sleep 10",
-
-      # Now move the files and change ownership
-      "sudo mv /home/ec2-user/ansible/* /home/itsadmin/default/",
-      "sudo chown -R itsadmin:itsadmin /home/itsadmin/default/"
+      for node in aws_instance.nodes : 
+      "echo '${node.private_ip} ${node.tags["Name"]}' | sudo tee -a /etc/hosts"
     ]
   }
 
-  tags = merge(var.tags, { Name = "ansible-master" })
-}
 
+  tags = { Name = "ansible-server" }
+}
