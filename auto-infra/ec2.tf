@@ -57,7 +57,7 @@ resource "aws_instance" "master" {
   # Upload the ansible folder
   provisioner "file" {
     source      = "${path.module}/../ansible" # Local path to your ansible folder
-    destination = "/home/ec2-user/ansible"    # Remote destination path
+    destination = "/tmp/ansible/"    # Remote destination path
   }
 
   # Move folder to itsadmin user (after user_data creates the user)
@@ -71,8 +71,11 @@ resource "aws_instance" "master" {
       "sleep 10",
 
       # Now move the files and change ownership
-      "sudo mv /home/ec2-user/ansible/* /home/itsadmin/default/",
-      "sudo chown -R itsadmin:itsadmin /home/itsadmin/default/"
+      "sudo mv /tmp/ansible/* /home/itsadmin/default/",
+      "sudo chown -R itsadmin:itsadmin /home/itsadmin/default/",
+      
+      # Execute the playbook as the itadmin user
+      "sudo -u itsadmin bash -c 'cd /home/itsadmin/default && ansible-playbook playbook.yml'"
     ]
   }
 
